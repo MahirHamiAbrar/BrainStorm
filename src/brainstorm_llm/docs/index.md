@@ -77,4 +77,8 @@ BrainStormLLM / BrainStormS1
 
 No `anthropic`, `openai`, or `typesafe-sdk` package is required at runtime.
 
+Agent frameworks: [langchain.md](./langchain.md) covers the LangChain chat
+model, tool/structured-output/streaming support, LangGraph, and the decision
+model Runnable.
+
 Continue with [quickstart.md](./quickstart.md).

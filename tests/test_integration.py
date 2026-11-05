@@ -67,3 +67,32 @@ def test_commandcode_live_prices(tmp_path) -> None:
     pricing = model_prices("commandcode", "live", cache_dir=tmp_path)
     assert pricing.pricing_type == "live"
     assert "deepseek/deepseek-v4.1-flash" in pricing.prices
+
+
+@requires_commandcode
+def test_langchain_chat_and_decisions() -> None:
+    from brainstorm_llm.integrations.langchain import (
+        BrainStormDecisions,
+        ChatBrainStorm,
+        Predicate,
+    )
+
+    chat = ChatBrainStorm(model="deepseek/deepseek-v4.1-flash", pricing="off", max_tokens=256)
+    try:
+        reply = chat.invoke("Reply with exactly: LANGCHAIN_OK")
+        assert reply.content_blocks
+        assert reply.usage_metadata is not None
+    finally:
+        chat.close()
+
+    decisions = BrainStormDecisions(pricing="off")
+    try:
+        result = decisions.invoke(
+            {
+                "input": "Production is down.",
+                "questions": {"urgent": Predicate(instructions="Is it urgent?")},
+            }
+        )
+        assert 0 <= result.predicates["urgent"].probability <= 1
+    finally:
+        decisions.close()
