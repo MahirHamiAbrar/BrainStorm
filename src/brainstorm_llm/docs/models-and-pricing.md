@@ -14,9 +14,15 @@ for model in models:
     print(model.id, model.name, model.context_length, model.supported_endpoints)
 ```
 
-`ModelInfo` fields include `id`, `name`, `provider`, `kind` (`chat` or `decision`),
-`context_length`, `max_output_tokens`, `supported_endpoints`, `input_modalities`,
-`supports_tools`, `supports_reasoning`, `reasoning_efforts`, and `description`.
+`ModelInfo` fields include `id`, `name`, `provider`, `kind` (`chat`, `decision`,
+or `embedding`), `context_length`, `max_output_tokens`, `supported_endpoints`,
+`input_modalities`, `supports_tools`, `supports_reasoning`, `reasoning_efforts`,
+and `description`.
+
+Providers rarely flag embedding models explicitly, so the catalog infers
+`kind="embedding"` from the id: anything containing `embed` (for example
+`nomic-embed-text` or `text-embedding-004`), plus the `all-minilm`, `bge-*`,
+`e5-*`, `gte-*`, and `nomic-*` families. Everything else is `kind="chat"`.
 
 Command Code's catalog appends the decision models `typesafe/jev` and
 `typesafe/jev-1.14.0` (`kind="decision"`). Pass `include_decision_models=False` to
@@ -24,6 +30,26 @@ omit them.
 
 `BrainStormLLM.list_models()` and `BrainStormS1.list_models(kind="decision")`
 delegate to the same provider catalog.
+
+## `list_embedding_models()`
+
+Filters the catalog to embedding models. The call only reads `/models`; it does
+not probe the embeddings endpoint.
+
+```python
+from brainstorm_llm import BrainStormLLM
+
+llm = BrainStormLLM(provider="ollama", model="llama3.2")
+
+for model in llm.list_embedding_models():
+    print(model.id, model.kind)          # nomic-embed-text:latest embedding
+
+llm.list_embedding_models(force_refresh=True)   # bypass the one-hour cache
+```
+
+Providers whose catalog has no embedding entries return an empty list. Use
+`list_models()` when you want the whole catalog and filter on `kind` yourself.
+See [embeddings.md](./embeddings.md).
 
 ## `model_prices()`
 

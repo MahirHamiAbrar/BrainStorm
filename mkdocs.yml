@@ -13,6 +13,7 @@ nav:
   - Messages: messages.md
   - Streaming: streaming.md
   - Tools: tools.md
+  - Embeddings: embeddings.md
   - Usage and costs: usage-and-costs.md
   - Models and pricing: models-and-pricing.md
   - Errors and retries: errors-and-retries.md

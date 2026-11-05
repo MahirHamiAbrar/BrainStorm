@@ -31,6 +31,13 @@ from .errors import (
     OpenAIErrorEnvelope,
     WireError,
 )
+from .embeddings import (
+    Embedding,
+    EmbeddingCreateParams,
+    EmbeddingInput,
+    EmbeddingResponse,
+    EmbeddingUsage,
+)
 from .messages import (
     Message,
     MessageCreateParams,
@@ -108,6 +115,11 @@ __all__ = [
     "ContentBlockStopEvent",
     "DocumentBlock",
     "DocumentSource",
+    "Embedding",
+    "EmbeddingCreateParams",
+    "EmbeddingInput",
+    "EmbeddingResponse",
+    "EmbeddingUsage",
     "ErrorDetail",
     "FileDocumentSource",
     "FileImageSource",

@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from ..schemas.models import ModelInfo
+from ..schemas.models import ModelInfo, model_kind_from_id
 from ..schemas.pricing import ModelPricing, PricingMode
 from .base import BaseProvider
 from .openai_compat import OpenAIWireMixin
+from .openai_embeddings import OpenAIEmbeddingWireMixin
 
 
-class GeminiProvider(OpenAIWireMixin, BaseProvider):
+class GeminiProvider(OpenAIEmbeddingWireMixin, OpenAIWireMixin, BaseProvider):
     """Google Gemini through its OpenAI-compatible endpoint."""
 
     name = "gemini"
@@ -27,6 +28,7 @@ class GeminiProvider(OpenAIWireMixin, BaseProvider):
             id=model_id,
             name=str(item.get("display_name") or item.get("name") or model_id).removeprefix("models/"),
             provider=self.name,
+            kind=model_kind_from_id(model_id),
             context_length=item.get("input_token_limit") or item.get("context_length"),
             max_output_tokens=item.get("output_token_limit"),
             created=item.get("created"),

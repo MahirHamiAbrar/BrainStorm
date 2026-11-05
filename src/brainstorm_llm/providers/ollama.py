@@ -3,10 +3,13 @@ from __future__ import annotations
 from ..schemas.pricing import ModelPricing, PricingMode
 from .base import BaseProvider
 from .openai_compat import OpenAIWireMixin
+from .openai_embeddings import OpenAIEmbeddingWireMixin
 
 
-class OllamaProvider(OpenAIWireMixin, BaseProvider):
+class OllamaProvider(OpenAIEmbeddingWireMixin, OpenAIWireMixin, BaseProvider):
     """Ollama's OpenAI-compatible endpoint, local or Ollama Cloud.
+
+    Chat and embedding models share the same ``/v1`` base URL.
 
     Args:
         host: Base host such as ``http://localhost:11434``. ``/v1`` is appended

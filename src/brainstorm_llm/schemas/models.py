@@ -4,7 +4,22 @@ from typing import Any, Literal
 
 from .base import BrainStormModel
 
-ModelKind = Literal["chat", "decision"]
+ModelKind = Literal["chat", "decision", "embedding"]
+
+_EMBEDDING_ID_MARKERS = ("embed", "minilm", "bge-", "e5-", "gte-", "nomic-")
+
+
+def model_kind_from_id(model_id: str) -> ModelKind:
+    """Infer ``chat`` or ``embedding`` from a model id.
+
+    Providers rarely flag embedding models explicitly, so common family names
+    (``*-embed-*``, ``all-minilm``, ``bge-*``, ``e5-*``, ``gte-*``) are used.
+    """
+
+    lowered = model_id.lower()
+    if any(marker in lowered for marker in _EMBEDDING_ID_MARKERS):
+        return "embedding"
+    return "chat"
 
 
 class ModelInfo(BrainStormModel):

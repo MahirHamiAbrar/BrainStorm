@@ -1,13 +1,13 @@
 # Providers
 
-| Provider | Wire | Base URL | Key |
-|---|---|---|---|
-| `commandcode` | OpenAI chat or Anthropic messages, per model | `https://api.commandcode.ai/provider/v1` | `COMMAND_API_KEY` / `CMD_API_KEY` |
-| `openrouter` | OpenAI chat | `https://openrouter.ai/api/v1` | `OPENROUTER_API_KEY` |
-| `ollama` | OpenAI chat | `http://localhost:11434/v1` | none (local) / `OLLAMA_API_KEY` |
-| `gemini` | OpenAI-compatible | `https://generativelanguage.googleapis.com/v1beta/openai` | `GEMINI_API_KEY` / `GOOGLE_API_KEY` |
-| `opencode` | OpenAI chat or Anthropic messages | `https://opencode.ai/inference` | `OPENCODE_API_KEY` |
-| `typesafe` | System One | `https://api.typesafe.ai/v1` | `TYPESAFE_API_KEY` |
+| Provider | Wire | Base URL | Key | Embeddings |
+|---|---|---|---|---|
+| `commandcode` | OpenAI chat or Anthropic messages, per model | `https://api.commandcode.ai/provider/v1` | `COMMAND_API_KEY` / `CMD_API_KEY` | no |
+| `openrouter` | OpenAI chat | `https://openrouter.ai/api/v1` | `OPENROUTER_API_KEY` | no |
+| `ollama` | OpenAI chat | `http://localhost:11434/v1` | none (local) / `OLLAMA_API_KEY` | yes |
+| `gemini` | OpenAI-compatible | `https://generativelanguage.googleapis.com/v1beta/openai` | `GEMINI_API_KEY` / `GOOGLE_API_KEY` | yes |
+| `opencode` | OpenAI chat or Anthropic messages | `https://opencode.ai/inference` | `OPENCODE_API_KEY` | no |
+| `typesafe` | System One | `https://api.typesafe.ai/v1` | `TYPESAFE_API_KEY` | no |
 
 ## Command Code
 
@@ -59,6 +59,14 @@ cloud = BrainStormLLM(
 
 Local inference is free; `model_prices("ollama")` returns zero prices.
 
+Embedding models share the same `/v1` base URL, so `embed()` and `aembed()`
+work on local and cloud clients:
+
+```python
+response = local.embed(["first", "second"], model="nomic-embed-text")
+print(response.dimensions, response.usage.prompt_tokens)
+```
+
 ## Gemini
 
 ```python
@@ -75,6 +83,23 @@ llm.generate(
 )
 ```
 
+Embeddings use the same OpenAI-compatible endpoint:
+
+```python
+response = llm.embed("hello", model="text-embedding-004")
+print(len(response.vectors), response.dimensions)
+```
+
+Gemini-specific embedding fields go through `extra_body`:
+
+```python
+llm.embed(
+    "hello",
+    model="text-embedding-004",
+    extra_body={"task_type": "RETRIEVAL_QUERY"},
+)
+```
+
 ## OpenCode
 
 ```python
@@ -85,6 +110,15 @@ go = BrainStormLLM(provider="opencode", model="deepseek-v4.1-flash", plan="go")
 `plan="go"` targets `https://opencode.ai/inference/go`. Models whose catalog entry
 only advertises `messages` use the Anthropic wire; all others use Chat Completions.
 The catalog is `https://opencode.ai/inference/v1/models`.
+
+## Embeddings
+
+Only `ollama` and `gemini` expose an OpenAI-compatible `/embeddings` endpoint,
+so they are the only providers that support `embed()` and `aembed()`.
+`commandcode`, `openrouter`, `opencode`, and `typesafe` do not expose
+embeddings: calling `embed()` on them raises
+`ConfigurationError("Provider '<name>' does not support embeddings")` before a
+request is sent. See [embeddings.md](./embeddings.md).
 
 ## Custom base URLs
 

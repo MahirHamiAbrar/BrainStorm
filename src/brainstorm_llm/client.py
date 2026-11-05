@@ -5,9 +5,12 @@ import threading
 import time
 from typing import Any, AsyncIterator, Iterator, Literal, Mapping, Sequence
 
+from pydantic import ValidationError
+
 from .errors import APIStreamError, BrainStormError, ConfigurationError
 from .log import library_logger
 from .providers import BaseProvider, get_provider
+from .schemas.embeddings import EmbeddingCreateParams, EmbeddingResponse
 from .schemas.messages import (
     Message,
     MessageCreateParams,
@@ -566,11 +569,137 @@ class BrainStormLLM:
             raise APIStreamError("stream ended without a message_start event")
         return accumulator.finalize()
 
+    # -- embeddings ----------------------------------------------------
+    @staticmethod
+    def _input_count(params: EmbeddingCreateParams) -> int:
+        return 1 if isinstance(params.input, str) else len(params.input)
+
+    def _embedding_params(
+        self,
+        texts: str | Sequence[str],
+        *,
+        model: str | None = None,
+        dimensions: int | None = None,
+        encoding_format: Literal["float", "base64"] | None = None,
+        user: str | None = None,
+    ) -> EmbeddingCreateParams:
+        if isinstance(texts, str):
+            if not texts.strip():
+                raise ConfigurationError("embed() requires non-empty input text")
+            normalized: str | list[str] = texts
+        else:
+            normalized = list(texts)
+            if not normalized:
+                raise ConfigurationError("embed() requires at least one input text")
+            if any(not text.strip() for text in normalized):
+                raise ConfigurationError("embed() input texts must not be empty")
+        try:
+            return EmbeddingCreateParams(
+                model=model or self.model,
+                input=normalized,
+                dimensions=dimensions,
+                encoding_format=encoding_format,
+                user=user,
+            )
+        except ValidationError as exc:
+            raise ConfigurationError(f"invalid embedding request: {exc}") from exc
+
+    def embed(
+        self,
+        texts: str | Sequence[str],
+        *,
+        model: str | None = None,
+        dimensions: int | None = None,
+        encoding_format: Literal["float", "base64"] | None = None,
+        user: str | None = None,
+        extra_body: dict[str, Any] | None = None,
+        headers: Mapping[str, str] | None = None,
+    ) -> EmbeddingResponse:
+        """Create embeddings for one or more texts.
+
+        Args:
+            texts: A single string or a sequence of non-empty strings.
+            model: Embedding model id. Defaults to the client's ``model``.
+            dimensions: Optional output vector size, when the model supports it.
+            encoding_format: ``"float"`` or ``"base64"``; providers default to float.
+            user: Optional end-user identifier forwarded to the provider.
+            extra_body: Provider-specific fields merged into the request body.
+            headers: Extra headers for this call.
+
+        Returns:
+            An :class:`EmbeddingResponse` whose :attr:`~EmbeddingResponse.vectors`
+            are ordered by input index.
+
+        Raises:
+            ConfigurationError: if the provider has no embeddings endpoint or the
+                input is empty.
+            APIStatusError: for non-success provider responses.
+            APIConnectionError: when the provider cannot be reached.
+
+        Example:
+            >>> llm = BrainStormLLM(provider="ollama", model="nomic-embed-text")
+            >>> response = llm.embed(["first document", "second document"])
+            >>> len(response.vectors)
+            2
+        """
+
+        params = self._embedding_params(
+            texts,
+            model=model,
+            dimensions=dimensions,
+            encoding_format=encoding_format,
+            user=user,
+        )
+        log = library_logger(self.provider_name, params.model)
+        log.debug("embed: texts={} dimensions={}", self._input_count(params), dimensions)
+        return self._provider.embed(
+            params,
+            extra_body=extra_body,
+            headers=dict(headers) if headers else None,
+        )
+
+    async def aembed(
+        self,
+        texts: str | Sequence[str],
+        *,
+        model: str | None = None,
+        dimensions: int | None = None,
+        encoding_format: Literal["float", "base64"] | None = None,
+        user: str | None = None,
+        extra_body: dict[str, Any] | None = None,
+        headers: Mapping[str, str] | None = None,
+    ) -> EmbeddingResponse:
+        """Async version of :meth:`embed` using the pooled async client."""
+
+        params = self._embedding_params(
+            texts,
+            model=model,
+            dimensions=dimensions,
+            encoding_format=encoding_format,
+            user=user,
+        )
+        log = library_logger(self.provider_name, params.model)
+        log.debug("aembed: texts={} dimensions={}", self._input_count(params), dimensions)
+        return await self._provider.aembed(
+            params,
+            extra_body=extra_body,
+            headers=dict(headers) if headers else None,
+        )
+
     # -- catalog / pricing ---------------------------------------------
     def list_models(self, **kwargs: Any) -> list[ModelInfo]:
         """Return this provider's catalog; accepts ``force_refresh=True``."""
 
         return self._provider.list_models(**kwargs)
+
+    def list_embedding_models(self, **kwargs: Any) -> list[ModelInfo]:
+        """Return only catalog entries of kind ``"embedding"``.
+
+        Accepts ``force_refresh=True``. Providers without an embeddings endpoint
+        return an empty list.
+        """
+
+        return self._provider.embedding_models(**kwargs)
 
     def model_prices(self, pricing_type: PricingMode = "any") -> ModelPricing:
         """Return this provider's price table.

@@ -8,7 +8,8 @@ import httpx
 import orjson
 
 from ..errors import ConfigurationError, MissingAPIKeyError, PricingUnavailableError, UnsupportedModelError
-from ..schemas.models import ModelInfo
+from ..schemas.embeddings import EmbeddingCreateParams, EmbeddingResponse
+from ..schemas.models import ModelInfo, model_kind_from_id
 from ..schemas.pricing import ModelPricing, PricingMode
 from ..transport.http import AsyncHttpTransport, HttpTransport, RetryPolicy, TransportConfig
 
@@ -60,6 +61,7 @@ class BaseProvider:
     api_key_env: tuple[str, ...] = ()
     requires_api_key = True
     zdr_supported = False
+    supports_embeddings = False
 
     def __init__(
         self,
@@ -203,6 +205,7 @@ class BaseProvider:
             id=model_id,
             name=str(item.get("name") or model_id),
             provider=self.name,
+            kind=model_kind_from_id(model_id),
             context_length=item.get("context_length") or item.get("context_window"),
             max_output_tokens=item.get("max_output_tokens") or item.get("max_completion_tokens"),
             supported_endpoints=list(item.get("supported_endpoints") or []),
@@ -259,6 +262,26 @@ class BaseProvider:
                 return model
         return None
 
+    def embedding_models(self, *, force_refresh: bool = False) -> list[ModelInfo]:
+        """Return catalog entries whose ``kind`` is ``"embedding"``.
+
+        Args:
+            force_refresh: Ignore the in-process catalog cache.
+        """
+
+        return [
+            model
+            for model in self.list_models(force_refresh=force_refresh)
+            if model.kind == "embedding"
+        ]
+
+    async def aembedding_models(self, *, force_refresh: bool = False) -> list[ModelInfo]:
+        """Async wrapper around :meth:`embedding_models`."""
+
+        import asyncio
+
+        return await asyncio.to_thread(self.embedding_models, force_refresh=force_refresh)
+
     # -- pricing -------------------------------------------------------
     def model_prices(self, pricing_type: PricingMode = "any") -> ModelPricing:
         """Return per-model prices; providers without pricing raise."""
@@ -292,6 +315,25 @@ class BaseProvider:
         """Async version of :meth:`stream`."""
 
         raise NotImplementedError
+
+    # -- embeddings ----------------------------------------------------
+    def embed(
+        self,
+        params: EmbeddingCreateParams,
+        **kwargs: Any,
+    ) -> EmbeddingResponse:
+        """Embed text; providers without an embeddings wire raise."""
+
+        raise ConfigurationError(f"Provider '{self.name}' does not support embeddings")
+
+    async def aembed(
+        self,
+        params: EmbeddingCreateParams,
+        **kwargs: Any,
+    ) -> EmbeddingResponse:
+        """Async version of :meth:`embed`."""
+
+        raise ConfigurationError(f"Provider '{self.name}' does not support embeddings")
 
     # -- model routing -------------------------------------------------
     def wire_for(self, model: str) -> str:

@@ -11,6 +11,10 @@ Every provider is normalized to the **Anthropic Messages** shape:
 OpenAI-style providers (OpenRouter, Ollama, Gemini, most Command Code models)
 are translated both ways. Anthropic-style endpoints pass through unchanged.
 
+Embeddings are the exception to the Messages shape: they come back as an
+OpenAI-style `EmbeddingResponse`, and only `ollama` and `gemini` expose the
+`/embeddings` endpoint (see [embeddings.md](./embeddings.md)).
+
 ## Install
 
 The package ships with the project. Declare it as a direct dependency:
@@ -69,6 +73,7 @@ BrainStormLLM / BrainStormS1
         │     └── typesafe      (systemone)
         │
         ├── conversion layer    (OpenAI <-> Anthropic, streaming state machine)
+        ├── embeddings          (Ollama + Gemini /embeddings, OpenAI shape)
         ├── transport           (httpx sync/async, retries, SSE)
         ├── schemas             (Pydantic v2)
         ├── pricing             (live sources + disk cache)

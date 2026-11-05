@@ -74,6 +74,56 @@ Conversion details:
 - `refusal` becomes a text block and sets `stop_reason="refusal"`.
 - Invalid tool arguments become `{"_raw_arguments": "<raw>"}`.
 
+## OpenAI Embeddings
+
+| Provider | Endpoint |
+|---|---|
+| `ollama` | `POST {base}/embeddings`, base `http://localhost:11434/v1` (or `https://ollama.com/v1`) |
+| `gemini` | `POST {base}/embeddings`, base `https://generativelanguage.googleapis.com/v1beta/openai` |
+
+No other provider implements this wire; `embed()` raises `ConfigurationError`
+instead of sending a request.
+
+Request:
+
+```json
+{
+  "model": "nomic-embed-text",
+  "input": ["first document", "second document"],
+  "dimensions": 256,
+  "encoding_format": "float",
+  "user": "reader-42"
+}
+```
+
+`input` is a string or a list of strings. `dimensions`, `encoding_format`, and
+`user` are omitted when unset, and `extra_body` fields are merged last, so they
+can override any field above.
+
+Response:
+
+```json
+{
+  "object": "list",
+  "data": [
+    {"object": "embedding", "index": 0, "embedding": [0.0123, -0.0456]},
+    {"object": "embedding", "index": 1, "embedding": "AACAPw=="}
+  ],
+  "model": "nomic-embed-text",
+  "usage": {"prompt_tokens": 4, "total_tokens": 4}
+}
+```
+
+Conversion details:
+
+- `data` is kept in response order; `EmbeddingResponse.vectors` sorts by `index`.
+- A string `embedding` is base64 and is decoded as little-endian `float32`; the
+  payload must be a whole number of 4-byte values.
+- Missing `object` defaults to `"list"`, a missing `model` falls back to the
+  requested id, and missing `usage` becomes zero counts.
+- `provider` is filled in by the client; `request_id` comes from `x-request-id`,
+  `request-id`, or `x-trace-id`.
+
 ## Anthropic Messages
 
 Canonical response:

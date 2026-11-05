@@ -42,6 +42,106 @@ model = ChatBrainStorm(client=llm)
 # The adapter uses llm.model and llm.provider_name.
 ```
 
+## Embeddings
+
+`BrainStormEmbeddings` is a standard LangChain `Embeddings` implementation. It
+works with the providers that expose an embeddings endpoint (`ollama` and
+`gemini`), and uses the client's pooled sync and async transports.
+
+```python
+from brainstorm_llm.integrations.langchain import BrainStormEmbeddings
+
+embeddings = BrainStormEmbeddings(
+    model="nomic-embed-text",
+    provider="ollama",
+)
+
+vectors = embeddings.embed_documents(["first document", "second document"])
+query = embeddings.embed_query("first document")
+
+print(len(vectors), len(query))
+```
+
+Constructor fields:
+
+| Field | Default | Description |
+|---|---|---|
+| `model` | `None` | Embedding model id; required unless `client=` is supplied |
+| `provider` | `"commandcode"` | Provider id used when no `client=` is given |
+| `api_key` | `None` | Overrides the provider's environment variable |
+| `base_url` | `None` | Overrides the provider's default endpoint |
+| `timeout` | `60.0` | Request timeout in seconds |
+| `max_retries` | `2` | Retries for transient provider failures |
+| `dimensions` | `None` | Requested vector size, when the model supports truncation |
+| `encoding_format` | `None` | `"float"` or `"base64"`; `None` leaves the provider default |
+| `headers` | `None` | Extra headers for every request |
+| `extra_body` | `None` | Provider-specific request fields merged into the body |
+| `client` | `None` | Preconfigured `BrainStormLLM`; its provider is always used |
+
+The default `provider` is `commandcode`, which has no embeddings endpoint, so
+pass `provider="ollama"` / `provider="gemini"` or inject a client.
+
+Methods:
+
+| Method | Returns |
+|---|---|
+| `embed_documents(texts)` | `list[list[float]]`, one vector per document; an empty list returns `[]` without a request |
+| `embed_query(text)` | `list[float]` for one query text |
+| `aembed_documents(texts)` | Native async version of `embed_documents` |
+| `aembed_query(text)` | Native async version of `embed_query` |
+| `close()` / `aclose()` | Close the client, but only when this adapter owns it |
+
+To reuse a configured client, inject it. The injected client's provider always
+wins, and `model=` still overrides its model:
+
+```python
+from brainstorm_llm import BrainStormLLM
+from brainstorm_llm.integrations.langchain import BrainStormEmbeddings
+
+llm = BrainStormLLM(provider="ollama", model="nomic-embed-text")
+
+embeddings = BrainStormEmbeddings(client=llm)                # provider + model from the client
+override = BrainStormEmbeddings("all-minilm", client=llm)    # model= wins, provider stays ollama
+```
+
+An injected client is never closed by the adapter, so `close()` and `aclose()`
+are no-ops in that case.
+
+Any LangChain component that accepts an `Embeddings` instance takes
+`BrainStormEmbeddings` as-is. A minimal vector-store-style flow: embed the
+documents once, embed the query, and rank by cosine similarity.
+
+```python
+import math
+
+documents = [
+    "Event loops schedule callbacks.",
+    "Embeddings map text to coordinates.",
+    "Retrievers rank documents against a query.",
+]
+
+index = embeddings.embed_documents(documents)
+query = embeddings.embed_query("How do event loops work?")
+
+def cosine(a: list[float], b: list[float]) -> float:
+    dot = sum(x * y for x, y in zip(a, b))
+    norm = math.sqrt(sum(x * x for x in a)) * math.sqrt(sum(y * y for y in b))
+    return dot / norm if norm else 0.0
+
+for score, text in sorted(
+    ((cosine(query, vector), text) for vector, text in zip(index, documents)),
+    reverse=True,
+)[:2]:
+    print(f"{score:.3f} {text}")
+```
+
+Async stores call `await embeddings.aembed_documents(...)` and
+`await embeddings.aembed_query(...)` instead. Failures are mapped through the
+same `raise_langchain_error` path as the chat model, so retry middleware sees
+`ModelAuthenticationError`, `ModelRateLimitError`, `ModelAPIError`, and the
+other standard exceptions. Provider support and request options are covered in
+[embeddings.md](./embeddings.md).
+
 ## Tools
 
 `bind_tools` accepts LangChain tools, callables, Pydantic classes, OpenAI tool

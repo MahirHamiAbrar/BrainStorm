@@ -38,6 +38,22 @@ def model_list(*models: dict[str, Any]) -> dict[str, Any]:
     return {"object": "list", "data": list(models)}
 
 
+def openai_embeddings(
+    *vectors: list[float],
+    model: str = "embed-model",
+    prompt_tokens: int = 4,
+) -> dict[str, Any]:
+    return {
+        "object": "list",
+        "data": [
+            {"object": "embedding", "index": index, "embedding": vector}
+            for index, vector in enumerate(vectors)
+        ],
+        "model": model,
+        "usage": {"prompt_tokens": prompt_tokens, "total_tokens": prompt_tokens},
+    }
+
+
 def openai_completion(
     *,
     content: str | None = "hello",
