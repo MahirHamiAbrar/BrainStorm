@@ -10,6 +10,8 @@ USER_AGENT = "brainstorm-llm/0.1"
 
 
 def parse_models_payload(payload: dict, *, cloud: bool = False) -> dict[str, TokenPrice]:
+    """Return zero prices for every Ollama model in the catalog."""
+
     note = "cloud pricing is not published via the models API" if cloud else "local inference"
     prices: dict[str, TokenPrice] = {}
     for item in payload.get("data") or []:
@@ -29,6 +31,8 @@ def fetch_ollama_prices(
     timeout: float | None = None,
     base_url: str | None = None,
 ) -> tuple[dict[str, TokenPrice], str]:
+    """Fetch Ollama's model list and return zero prices for local inference."""
+
     url = f"{(base_url or DEFAULT_BASE_URL).rstrip('/')}/models"
     response = httpx.get(
         url,

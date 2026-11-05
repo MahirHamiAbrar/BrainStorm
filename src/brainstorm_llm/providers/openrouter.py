@@ -9,12 +9,16 @@ from .openai_compat import OpenAIWireMixin
 
 
 class OpenRouterProvider(OpenAIWireMixin, BaseProvider):
+    """OpenRouter gateway over its OpenAI-compatible Chat Completions API."""
+
     name = "openrouter"
     default_base_url = "https://openrouter.ai/api/v1"
     api_key_env = ("OPENROUTER_API_KEY",)
     requires_api_key = True
 
     def wire_for(self, model: str) -> str:
+        """OpenRouter serves every model through Chat Completions."""
+
         return "openai"
 
     def _model_info_from_item(self, item: Mapping[str, Any]) -> ModelInfo:
@@ -39,6 +43,8 @@ class OpenRouterProvider(OpenAIWireMixin, BaseProvider):
         )
 
     def model_prices(self, pricing_type: PricingMode = "any") -> ModelPricing:
+        """Return OpenRouter's catalog prices, converted to per-million rates."""
+
         from ..pricing import model_prices
 
         return model_prices(self.name, pricing_type, base_url=self.base_url)

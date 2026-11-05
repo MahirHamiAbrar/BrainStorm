@@ -22,6 +22,8 @@ def resolve_api_key(
     *,
     required: bool,
 ) -> str | None:
+    """Resolve an explicit key or the first non-empty environment variable."""
+
     if explicit:
         return explicit
     for name in env_vars:
@@ -34,6 +36,24 @@ def resolve_api_key(
 
 
 class BaseProvider:
+    """Shared HTTP, catalog, retry, and pricing behavior for providers.
+
+    Subclasses combine this with a wire mixin (OpenAI, Anthropic, or System One)
+    and implement :meth:`wire_for`. A provider owns one sync and one async
+    ``httpx`` client; close them with :meth:`close` or :meth:`aclose`.
+
+    Args:
+        api_key: Explicit key; falls back to the provider's environment variables.
+        base_url: API root override.
+        headers: Extra headers for every request.
+        timeout: Request timeout in seconds.
+        max_retries: Retry count for transient failures.
+        zdr: Send ``x-cmd-zdr: 1`` when the provider supports it.
+        retry_policy: Optional fully customized retry policy.
+        transport: Optional ``httpx`` transport, primarily for tests.
+        async_transport: Optional async ``httpx`` transport, primarily for tests.
+    """
+
     name = "base"
     default_base_url = ""
     default_model: str | None = None
@@ -77,9 +97,13 @@ class BaseProvider:
 
     # -- lifecycle -----------------------------------------------------
     def close(self) -> None:
+        """Close the pooled synchronous HTTP client."""
+
         self._sync.close()
 
     async def aclose(self) -> None:
+        """Close the pooled asynchronous HTTP client."""
+
         await self._async.aclose()
 
     def __enter__(self) -> "BaseProvider":
@@ -96,6 +120,8 @@ class BaseProvider:
 
     # -- request helpers ----------------------------------------------
     def request_headers(self, extra: Mapping[str, str] | None = None) -> dict[str, str]:
+        """Build per-request headers, including the ZDR flag when enabled."""
+
         headers: dict[str, str] = {}
         if self.zdr:
             headers["x-cmd-zdr"] = "1"
@@ -111,6 +137,8 @@ class BaseProvider:
         headers: Mapping[str, str] | None = None,
         stream: bool = False,
     ) -> httpx.Response:
+        """POST a JSON body through the retrying synchronous transport."""
+
         return self._sync.request(
             "POST",
             path,
@@ -127,6 +155,8 @@ class BaseProvider:
         headers: Mapping[str, str] | None = None,
         stream: bool = False,
     ) -> httpx.Response:
+        """POST a JSON body through the retrying asynchronous transport."""
+
         return await self._async.request(
             "POST",
             path,
@@ -141,6 +171,8 @@ class BaseProvider:
         *,
         headers: Mapping[str, str] | None = None,
     ) -> httpx.Response:
+        """GET a path through the retrying synchronous transport."""
+
         return self._sync.request("GET", path, headers=self.request_headers(headers))
 
     async def aget(
@@ -149,10 +181,14 @@ class BaseProvider:
         *,
         headers: Mapping[str, str] | None = None,
     ) -> httpx.Response:
+        """GET a path through the retrying asynchronous transport."""
+
         return await self._async.request("GET", path, headers=self.request_headers(headers))
 
     @staticmethod
     def json_body(response: httpx.Response) -> dict[str, Any]:
+        """Decode a response body with orjson and require a JSON object."""
+
         payload = orjson.loads(response.content)
         if not isinstance(payload, dict):
             raise ValueError("expected a JSON object response")
@@ -188,6 +224,12 @@ class BaseProvider:
         return models
 
     def list_models(self, *, force_refresh: bool = False) -> list[ModelInfo]:
+        """Fetch the provider's model catalog, cached in memory for one hour.
+
+        Args:
+            force_refresh: Ignore the in-process cache and request the catalog.
+        """
+
         now = time.monotonic()
         if (
             not force_refresh
@@ -203,11 +245,15 @@ class BaseProvider:
         return list(models)
 
     async def alist_models(self, *, force_refresh: bool = False) -> list[ModelInfo]:
+        """Async wrapper around :meth:`list_models`."""
+
         import asyncio
 
         return await asyncio.to_thread(self.list_models, force_refresh=force_refresh)
 
     def find_model(self, model_id: str, *, force_refresh: bool = False) -> ModelInfo | None:
+        """Return catalog metadata for ``model_id``, or ``None`` if unknown."""
+
         for model in self.list_models(force_refresh=force_refresh):
             if model.id == model_id:
                 return model
@@ -215,31 +261,50 @@ class BaseProvider:
 
     # -- pricing -------------------------------------------------------
     def model_prices(self, pricing_type: PricingMode = "any") -> ModelPricing:
+        """Return per-model prices; providers without pricing raise."""
+
         raise PricingUnavailableError(f"Provider '{self.name}' does not expose pricing data")
 
     async def amodel_prices(self, pricing_type: PricingMode = "any") -> ModelPricing:
+        """Async wrapper around :meth:`model_prices`."""
+
         import asyncio
 
         return await asyncio.to_thread(self.model_prices, pricing_type)
 
     # -- generation (implemented by wire mixins) -----------------------
     def generate(self, params, **kwargs):  # pragma: no cover - abstract
+        """Run one non-streaming request; implemented by a wire mixin."""
+
         raise NotImplementedError
 
     async def agenerate(self, params, **kwargs):  # pragma: no cover - abstract
+        """Async version of :meth:`generate`."""
+
         raise NotImplementedError
 
     def stream(self, params, **kwargs) -> Iterator[Any]:  # pragma: no cover - abstract
+        """Stream one request; implemented by a wire mixin."""
+
         raise NotImplementedError
 
     def astream(self, params, **kwargs):  # pragma: no cover - abstract
+        """Async version of :meth:`stream`."""
+
         raise NotImplementedError
 
     # -- model routing -------------------------------------------------
     def wire_for(self, model: str) -> str:
+        """Return the wire to use for ``model`` (``openai``, ``anthropic``, ...).
+
+        Implemented by each provider; used by the client's per-model routing.
+        """
+
         raise NotImplementedError
 
     def ensure_model_routable(self, model: str) -> None:
+        """Raise :class:`UnsupportedModelError` when no implemented wire serves the model."""
+
         info = self.find_model(model)
         if info is not None and info.supported_endpoints and self.wire_for(model) == "unsupported":
             raise UnsupportedModelError(

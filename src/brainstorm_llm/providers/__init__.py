@@ -22,6 +22,18 @@ PROVIDERS: dict[str, type[BaseProvider]] = {
 
 
 def get_provider(name: str, **kwargs: Any) -> BaseProvider:
+    """Instantiate a provider by id.
+
+    Args:
+        name: One of ``commandcode``, ``openrouter``, ``ollama``, ``gemini``,
+            ``opencode``, or ``typesafe``.
+        **kwargs: Forwarded to the provider constructor (``api_key``,
+            ``base_url``, ``timeout``, ``max_retries``, ``zdr``, etc.).
+
+    Raises:
+        ConfigurationError: if the provider id is unknown.
+    """
+
     try:
         provider_class = PROVIDERS[name]
     except KeyError as exc:

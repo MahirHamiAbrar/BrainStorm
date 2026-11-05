@@ -6,6 +6,8 @@ from typing import AsyncIterable, AsyncIterator, Iterable, Iterator
 
 @dataclass(frozen=True)
 class SSEEvent:
+    """One decoded Server-Sent Event: optional event name and data payload."""
+
     data: str
     event: str | None = None
 
@@ -17,6 +19,8 @@ def _dispatch(event: str | None, data_lines: list[str]) -> SSEEvent | None:
 
 
 def iter_sse_events(lines: Iterable[str]) -> Iterator[SSEEvent]:
+    """Parse synchronous lines into SSE events, joining multi-line data."""
+
     event: str | None = None
     data_lines: list[str] = []
 
@@ -45,6 +49,8 @@ def iter_sse_events(lines: Iterable[str]) -> Iterator[SSEEvent]:
 
 
 async def aiter_sse_events(lines: AsyncIterable[str]) -> AsyncIterator[SSEEvent]:
+    """Async version of :func:`iter_sse_events`."""
+
     event: str | None = None
     data_lines: list[str] = []
 

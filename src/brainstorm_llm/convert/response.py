@@ -19,6 +19,8 @@ FINISH_REASON_MAP: dict[str, StopReason] = {
 
 
 def map_finish_reason(reason: str | None) -> StopReason | None:
+    """Map an OpenAI ``finish_reason`` to an Anthropic ``stop_reason``."""
+
     if reason is None:
         return None
     return FINISH_REASON_MAP.get(reason, "end_turn")
@@ -36,6 +38,8 @@ def _parse_arguments(raw: str) -> dict[str, Any]:
 
 
 def usage_from_openai(payload: dict[str, Any] | None) -> Usage:
+    """Normalize OpenAI usage, subtracting cached tokens from the input count."""
+
     if not payload:
         return Usage()
 
@@ -105,6 +109,12 @@ def openai_to_anthropic_message(
     *,
     request_model: str | None = None,
 ) -> Message:
+    """Convert one OpenAI Chat Completion response into an Anthropic ``Message``.
+
+    Handles text, refusals, reasoning traces, and tool calls. Invalid tool
+    argument JSON is preserved under ``_raw_arguments``.
+    """
+
     choices = payload.get("choices") or []
     if not choices:
         raise ValueError("OpenAI response contained no choices")
@@ -138,4 +148,6 @@ def openai_to_anthropic_message(
 
 
 def anthropic_message_from_payload(payload: dict[str, Any]) -> Message:
+    """Validate a native Anthropic Messages response payload."""
+
     return Message.model_validate(payload)

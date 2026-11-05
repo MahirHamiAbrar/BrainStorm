@@ -177,6 +177,8 @@ def compute_cost(price: TokenPrice, usage: Usage) -> Decimal:
     million = Decimal(1_000_000)
 
     def value(raw: float | None) -> Decimal:
+        """Convert an optional price to Decimal, treating ``None`` as zero."""
+
         return Decimal(str(raw or 0))
 
     return (

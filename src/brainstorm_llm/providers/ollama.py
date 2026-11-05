@@ -6,6 +6,14 @@ from .openai_compat import OpenAIWireMixin
 
 
 class OllamaProvider(OpenAIWireMixin, BaseProvider):
+    """Ollama's OpenAI-compatible endpoint, local or Ollama Cloud.
+
+    Args:
+        host: Base host such as ``http://localhost:11434``. ``/v1`` is appended
+            automatically when missing.
+        base_url: Explicit API root, taking precedence over ``host``.
+    """
+
     name = "ollama"
     default_base_url = "http://localhost:11434/v1"
     api_key_env = ("OLLAMA_API_KEY",)
@@ -18,9 +26,13 @@ class OllamaProvider(OpenAIWireMixin, BaseProvider):
         super().__init__(base_url=target, **kwargs)
 
     def wire_for(self, model: str) -> str:
+        """Ollama serves every model through its OpenAI-compatible endpoint."""
+
         return "openai"
 
     def model_prices(self, pricing_type: PricingMode = "any") -> ModelPricing:
+        """Return zero prices for local inference, or catalog-zero cloud prices."""
+
         from ..pricing import model_prices
 
         return model_prices(self.name, pricing_type, base_url=self.base_url)

@@ -9,12 +9,16 @@ from .openai_compat import OpenAIWireMixin
 
 
 class GeminiProvider(OpenAIWireMixin, BaseProvider):
+    """Google Gemini through its OpenAI-compatible endpoint."""
+
     name = "gemini"
     default_base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
     api_key_env = ("GEMINI_API_KEY", "GOOGLE_API_KEY")
     requires_api_key = True
 
     def wire_for(self, model: str) -> str:
+        """Gemini is called through its OpenAI-compatible endpoint."""
+
         return "openai"
 
     def _model_info_from_item(self, item: Mapping[str, Any]) -> ModelInfo:
@@ -29,6 +33,8 @@ class GeminiProvider(OpenAIWireMixin, BaseProvider):
         )
 
     def model_prices(self, pricing_type: PricingMode = "any") -> ModelPricing:
+        """Return Gemini's scraped or cached price table."""
+
         from ..pricing import model_prices
 
         return model_prices(self.name, pricing_type, base_url=self.base_url)

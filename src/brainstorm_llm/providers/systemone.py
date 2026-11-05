@@ -8,6 +8,8 @@ from ..schemas.systemone import Image, SystemOneRequest, SystemOneResponse
 
 
 class SystemOneWireMixin:
+    """Send System One decision requests and attach request metadata to responses."""
+
     systemone_path = "/systemone"
 
     if TYPE_CHECKING:
@@ -59,6 +61,8 @@ class SystemOneWireMixin:
         assets: Mapping[str, Image] | None = None,
         headers: Mapping[str, str] | None = None,
     ) -> SystemOneResponse:
+        """POST a decision request and attach the request id to the response."""
+
         payload = self._systemone_payload(request, assets)
         response = self.post(self.systemone_path, payload, headers=headers)
         return self._parse_systemone(response, self.json_body(response))
@@ -70,6 +74,8 @@ class SystemOneWireMixin:
         assets: Mapping[str, Image] | None = None,
         headers: Mapping[str, str] | None = None,
     ) -> SystemOneResponse:
+        """Async version of :meth:`system_one`."""
+
         payload = self._systemone_payload(request, assets)
         response = await self.apost(self.systemone_path, payload, headers=headers)
         return self._parse_systemone(response, self.json_body(response))

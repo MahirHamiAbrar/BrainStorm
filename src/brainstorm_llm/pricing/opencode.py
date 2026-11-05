@@ -20,6 +20,8 @@ def _price(value: object) -> float | None:
 
 
 def parse_models_payload(payload: dict) -> dict[str, TokenPrice]:
+    """Extract per-million USD prices from OpenCode's model catalog."""
+
     prices: dict[str, TokenPrice] = {}
     for item in payload.get("data") or []:
         if not isinstance(item, dict):
@@ -51,6 +53,8 @@ def fetch_opencode_prices(
     timeout: float | None = None,
     base_url: str | None = None,
 ) -> tuple[dict[str, TokenPrice], str]:
+    """Fetch OpenCode's live model catalog and its embedded prices."""
+
     response = httpx.get(
         MODELS_URL,
         timeout=timeout or 60.0,

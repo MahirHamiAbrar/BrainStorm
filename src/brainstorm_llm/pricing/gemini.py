@@ -58,6 +58,8 @@ def _paid_value(cells: list[str]) -> tuple[float | None, str | None]:
 
 
 def parse_pricing_markdown(markdown: str) -> dict[str, TokenPrice]:
+    """Parse Gemini's pricing Markdown into per-model token prices."""
+
     headings = list(_HEADING.finditer(markdown))
     prices: dict[str, TokenPrice] = {}
 
@@ -96,6 +98,8 @@ def fetch_gemini_prices(
     timeout: float | None = None,
     base_url: str | None = None,
 ) -> tuple[dict[str, TokenPrice], str]:
+    """Fetch and parse Gemini's live pricing document."""
+
     response = httpx.get(
         PRICING_URL,
         timeout=timeout or 60.0,

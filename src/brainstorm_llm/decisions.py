@@ -30,7 +30,31 @@ DEFAULT_S1_MODEL = "typesafe/jev-1.14.0"
 
 
 class BrainStormS1:
-    """System One decision client with TypeSafe-SDK-compatible request/response types."""
+    """System One decision client with TypeSafe-SDK-compatible types.
+
+    Sends a shared ``state`` plus named typed questions and returns probabilities,
+    not text.
+
+    Args:
+        model: Decision model id. Defaults to ``typesafe/jev-1.14.0`` for the
+            Command Code and TypeSafe providers.
+        provider: ``"commandcode"``, ``"typesafe"``, ``"opencode"``, or a
+            provider instance.
+        api_key: Overrides the provider's environment variable.
+        base_url: Overrides the provider's default endpoint.
+        headers: Extra HTTP headers for every request.
+        timeout: Request timeout in seconds.
+        max_retries: Retries for transient statuses and connection errors.
+        zdr: Zero-data-retention header. Defaults to ``False`` because Command
+            Code's ``/systemone`` refuses it.
+        pricing: ``"off"``, ``"cached"``, ``"any"``, or ``"live"`` cost lookup mode.
+        on_usage: Default callback invoked with a :class:`CallUsage` after each call.
+
+    Example:
+        >>> s1 = BrainStormS1()
+        >>> result = s1.system_one("ticket text", {"urgent": Noul(instructions="Urgent?")})
+        >>> result.nouls["urgent"].noul
+    """
 
     def __init__(
         self,
@@ -81,9 +105,13 @@ class BrainStormS1:
 
     # -- lifecycle -----------------------------------------------------
     def close(self) -> None:
+        """Close the pooled synchronous HTTP client."""
+
         self._provider.close()
 
     async def aclose(self) -> None:
+        """Close the pooled asynchronous HTTP client."""
+
         await self._provider.aclose()
 
     def __enter__(self) -> "BrainStormS1":
@@ -188,6 +216,26 @@ class BrainStormS1:
         headers: Mapping[str, str] | None = None,
         on_usage: UsageCallback | None = None,
     ) -> SystemOneResponse | SystemOneResponseT:
+        """Evaluate typed questions against one state.
+
+        Args:
+            state: Shared context as a string, object, or array.
+            questions: Named ``Noul``, ``Choice``, or ``Score`` questions.
+            model: Per-call model override.
+            assets: Named images referenced by placeholder in ``state`` or questions.
+            response_model: Optional ``SystemOneResponse`` subclass or Pydantic
+                model used to validate and expose the answers.
+            headers: Extra headers for this call.
+            on_usage: Per-call usage callback in addition to the client callback.
+
+        Returns:
+            A :class:`SystemOneResponse` with answers keyed by question name.
+
+        Raises:
+            pydantic.ValidationError: if the request violates System One limits.
+            APIStatusError: if the provider rejects the request.
+        """
+
         request = self._request(state, questions, model)
         method = getattr(self._provider, "system_one", None)
         if method is None:
@@ -226,6 +274,8 @@ class BrainStormS1:
         headers: Mapping[str, str] | None = None,
         on_usage: UsageCallback | None = None,
     ) -> SystemOneResponse | SystemOneResponseT:
+        """Async version of :meth:`system_one`."""
+
         request = self._request(state, questions, model)
         method = getattr(self._provider, "asystem_one", None)
         if method is None:
@@ -260,20 +310,31 @@ class BrainStormS1:
 
     # -- catalog / pricing ---------------------------------------------
     def list_models(self, *, kind: str | None = None, **kwargs: Any) -> list[ModelInfo]:
+        """List available models, optionally filtered by ``kind``.
+
+        Use ``kind="decision"`` to show only System One models.
+        """
+
         models = self._provider.list_models(**kwargs)
         if kind is not None:
             models = [model for model in models if model.kind == kind]
         return models
 
     def model_prices(self, pricing_type: PricingMode = "any") -> ModelPricing:
+        """Return the provider's price table for decision models."""
+
         return self._provider.model_prices(pricing_type)
 
 
 class _ModelsResource:
+    """TypeSafe-SDK-style ``models`` resource exposed as ``s1.models``."""
+
     def __init__(self, client: "BrainStormS1") -> None:
         self._client = client
 
     def list(self, *, kind: str | None = None, **kwargs: Any) -> list[ModelInfo]:
+        """List models, optionally filtered to ``"decision"``."""
+
         return self._client.list_models(kind=kind, **kwargs)
 
 

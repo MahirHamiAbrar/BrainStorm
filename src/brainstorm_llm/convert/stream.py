@@ -33,6 +33,12 @@ class _ToolState:
 
 @dataclass
 class OpenAIStreamTranslator:
+    """Translate OpenAI Chat Completions chunks into Anthropic stream events.
+
+    Feed every decoded chunk to :meth:`process_chunk`, then call :meth:`finalize`
+    after the upstream ``[DONE]`` marker to close blocks and emit final usage.
+    """
+
     model: str
     message_id: str | None = None
     created: int | None = None
@@ -134,6 +140,8 @@ class OpenAIStreamTranslator:
         return events
 
     def process_chunk(self, chunk: dict[str, Any]) -> list[Any]:
+        """Translate one OpenAI chunk into zero or more Anthropic events."""
+
         if chunk.get("error"):
             return []
 
@@ -197,6 +205,8 @@ class OpenAIStreamTranslator:
         return events
 
     def finalize(self) -> list[Any]:
+        """Close open blocks and emit ``message_delta`` plus ``message_stop``."""
+
         if self.finished:
             return []
         self.finished = True

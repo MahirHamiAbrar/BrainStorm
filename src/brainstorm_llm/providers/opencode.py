@@ -13,6 +13,17 @@ from .systemone import SystemOneWireMixin
 
 
 class OpenCodeProvider(OpenAIWireMixin, AnthropicWireMixin, SystemOneWireMixin, BaseProvider):
+    """OpenCode Console gateway.
+
+    Models whose catalog entry advertises only the ``messages`` API use the
+    Anthropic wire; every other text model uses Chat Completions, which Console
+    translates upstream.
+
+    Args:
+        plan: ``"payg"`` for pay-as-you-go or ``"go"`` for a Go subscription.
+        base_url: Optional API root override.
+    """
+
     name = "opencode"
     default_base_url = "https://opencode.ai/inference"
     api_key_env = ("OPENCODE_API_KEY",)
@@ -28,6 +39,8 @@ class OpenCodeProvider(OpenAIWireMixin, AnthropicWireMixin, SystemOneWireMixin, 
         self.systemone_path = "/systemone/v1/systemone"
 
     def wire_for(self, model: str) -> str:
+        """Pick the wire from the model's catalog ``api`` entry."""
+
         info: ModelInfo | None = None
         try:
             info = self.find_model(model)
@@ -69,22 +82,30 @@ class OpenCodeProvider(OpenAIWireMixin, AnthropicWireMixin, SystemOneWireMixin, 
         )
 
     def generate(self, params, **kwargs):
+        """Generate on the wire selected for the requested model."""
+
         if self.wire_for(params.model) == "anthropic":
             return AnthropicWireMixin.generate(self, params, **kwargs)
         return OpenAIWireMixin.generate(self, params, **kwargs)
 
     async def agenerate(self, params, **kwargs):
+        """Async version of :meth:`generate`."""
+
         if self.wire_for(params.model) == "anthropic":
             return await AnthropicWireMixin.agenerate(self, params, **kwargs)
         return await OpenAIWireMixin.agenerate(self, params, **kwargs)
 
     def stream(self, params, **kwargs) -> Iterator[RawMessageStreamEvent]:
+        """Stream on the wire selected for the requested model."""
+
         if self.wire_for(params.model) == "anthropic":
             yield from AnthropicWireMixin.stream(self, params, **kwargs)
         else:
             yield from OpenAIWireMixin.stream(self, params, **kwargs)
 
     async def astream(self, params, **kwargs) -> AsyncIterator[RawMessageStreamEvent]:
+        """Async version of :meth:`stream`."""
+
         if self.wire_for(params.model) == "anthropic":
             async for event in AnthropicWireMixin.astream(self, params, **kwargs):
                 yield event
@@ -93,6 +114,8 @@ class OpenCodeProvider(OpenAIWireMixin, AnthropicWireMixin, SystemOneWireMixin, 
                 yield event
 
     def model_prices(self, pricing_type: PricingMode = "any") -> ModelPricing:
+        """Return OpenCode's catalog prices, already expressed per million tokens."""
+
         from ..pricing import model_prices
 
         return model_prices(self.name, pricing_type, base_url=self.base_url)

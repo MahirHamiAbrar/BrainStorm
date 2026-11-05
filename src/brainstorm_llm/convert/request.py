@@ -18,6 +18,8 @@ from ..schemas.tools import ToolChoiceAny, ToolChoiceAuto, ToolChoiceNone, ToolC
 
 
 def system_text(system: str | list[TextBlock] | None) -> str | None:
+    """Flatten a string or text-block system prompt into one string."""
+
     if system is None:
         return None
     if isinstance(system, str):
@@ -171,6 +173,15 @@ def anthropic_to_openai_payload(
     stream: bool = False,
     extra_body: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Convert Anthropic-style request parameters into an OpenAI Chat payload.
+
+    Args:
+        params: Validated Anthropic-style request arguments.
+        stream: Request streaming and include the final usage chunk.
+        extra_body: Provider-specific fields merged last, so they can override
+            any generated field.
+    """
+
     payload: dict[str, Any] = {
         "model": params.model,
         "messages": _convert_messages(params.messages),

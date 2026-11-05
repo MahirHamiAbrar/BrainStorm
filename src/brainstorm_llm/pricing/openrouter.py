@@ -21,6 +21,8 @@ def _per_million(value: object) -> float | None:
 
 
 def parse_models_payload(payload: dict) -> dict[str, TokenPrice]:
+    """Convert OpenRouter's per-token prices to per-million USD prices."""
+
     prices: dict[str, TokenPrice] = {}
     for item in payload.get("data") or []:
         if not isinstance(item, dict):
@@ -49,6 +51,8 @@ def fetch_openrouter_prices(
     timeout: float | None = None,
     base_url: str | None = None,
 ) -> tuple[dict[str, TokenPrice], str]:
+    """Fetch OpenRouter's model catalog and extract its embedded prices."""
+
     url = f"{(base_url or DEFAULT_BASE_URL).rstrip('/')}/models"
     response = httpx.get(
         url,

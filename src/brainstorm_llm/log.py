@@ -13,6 +13,8 @@ logger.disable("brainstorm_llm")
 
 
 def get_logger(**context: Any):
+    """Return a loguru logger bound to the supplied structured context."""
+
     return logger.bind(**context) if context else logger
 
 
@@ -48,4 +50,6 @@ def enable_debug() -> None:
 
 
 def library_logger(provider: str = "-", model: str = "-"):
+    """Return the package logger bound to provider and model fields."""
+
     return logger.bind(logger_name="brainstorm_llm", provider=provider, model=model)

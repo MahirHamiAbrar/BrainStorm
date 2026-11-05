@@ -26,6 +26,8 @@ MANUAL_IDS = {
 
 @dataclass(frozen=True)
 class ParsedPriceRow:
+    """One model row parsed from the Command Code pricing page."""
+
     name: str
     context: str | None
     input: float | None
@@ -70,6 +72,8 @@ def _model_name(cell) -> str:
 
 
 def parse_pricing_html(html: str) -> list[ParsedPriceRow]:
+    """Parse the pricing page's ``role="row"`` grid into price rows."""
+
     tree = LexborHTMLParser(html)
     rows = tree.css('div[role="row"]')
     parsed: list[ParsedPriceRow] = []
@@ -129,6 +133,8 @@ def fetch_commandcode_prices(
     timeout: float | None = None,
     base_url: str | None = None,
 ) -> tuple[dict[str, TokenPrice], str]:
+    """Fetch live Command Code prices and map display names to model IDs."""
+
     timeout = timeout or 60.0
     headers = {"User-Agent": USER_AGENT}
     response = httpx.get(PRICING_URL, timeout=timeout, follow_redirects=True, headers=headers)

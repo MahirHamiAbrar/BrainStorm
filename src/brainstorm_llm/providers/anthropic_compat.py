@@ -24,6 +24,12 @@ def _request_id(response) -> str | None:
 
 
 class AnthropicWireMixin:
+    """Generate and stream through a native Anthropic Messages endpoint.
+
+    The response already matches the canonical schema; only SSE events and
+    error envelopes need light normalization.
+    """
+
     messages_path = "/messages"
 
     if TYPE_CHECKING:
@@ -56,6 +62,8 @@ class AnthropicWireMixin:
         headers: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> Message:
+        """Call the native Messages endpoint and validate the response."""
+
         payload = params.to_wire()
         payload.pop("stream", None)
         if extra_body:
@@ -73,6 +81,8 @@ class AnthropicWireMixin:
         headers: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> Message:
+        """Async version of :meth:`generate`."""
+
         payload = params.to_wire()
         payload.pop("stream", None)
         if extra_body:
@@ -90,6 +100,8 @@ class AnthropicWireMixin:
         headers: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> Iterator[RawMessageStreamEvent]:
+        """Parse the native Anthropic SSE stream into typed events."""
+
         payload = params.to_wire()
         payload["stream"] = True
         if extra_body:
@@ -118,6 +130,8 @@ class AnthropicWireMixin:
         headers: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[RawMessageStreamEvent]:
+        """Async version of :meth:`stream`."""
+
         payload = params.to_wire()
         payload["stream"] = True
         if extra_body:

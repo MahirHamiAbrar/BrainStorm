@@ -25,6 +25,12 @@ def _request_id(response) -> str | None:
 
 
 class OpenAIWireMixin:
+    """Generate and stream through an OpenAI Chat Completions endpoint.
+
+    Responses and stream chunks are translated to the Anthropic schema before
+    they reach the client.
+    """
+
     chat_completions_path = "/chat/completions"
 
     if TYPE_CHECKING:
@@ -57,6 +63,8 @@ class OpenAIWireMixin:
         headers: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> Message:
+        """Translate the request, call Chat Completions, and normalize the response."""
+
         payload = anthropic_to_openai_payload(params, stream=False, extra_body=extra_body)
         response = self.post(self.chat_completions_path, payload, headers=headers)
         message = openai_to_anthropic_message(self.json_body(response), request_model=params.model)
@@ -71,6 +79,8 @@ class OpenAIWireMixin:
         headers: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> Message:
+        """Async version of :meth:`generate`."""
+
         payload = anthropic_to_openai_payload(params, stream=False, extra_body=extra_body)
         response = await self.apost(self.chat_completions_path, payload, headers=headers)
         message = openai_to_anthropic_message(self.json_body(response), request_model=params.model)
@@ -85,6 +95,8 @@ class OpenAIWireMixin:
         headers: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> Iterator[RawMessageStreamEvent]:
+        """Translate OpenAI chunks into Anthropic stream events."""
+
         payload = anthropic_to_openai_payload(params, stream=True, extra_body=extra_body)
         response = self.post(self.chat_completions_path, payload, headers=headers, stream=True)
         translator = OpenAIStreamTranslator(model=params.model, request_id=_request_id(response))
@@ -115,6 +127,8 @@ class OpenAIWireMixin:
         headers: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[RawMessageStreamEvent]:
+        """Async version of :meth:`stream`."""
+
         payload = anthropic_to_openai_payload(params, stream=True, extra_body=extra_body)
         response = await self.apost(self.chat_completions_path, payload, headers=headers, stream=True)
         translator = OpenAIStreamTranslator(model=params.model, request_id=_request_id(response))

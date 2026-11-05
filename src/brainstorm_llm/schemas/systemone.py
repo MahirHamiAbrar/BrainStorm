@@ -143,6 +143,8 @@ class Image:
 
     @property
     def data(self) -> bytes:
+        """Raw image bytes."""
+
         return self._data
 
     def to_asset(self) -> dict[str, str]:

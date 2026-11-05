@@ -14,6 +14,8 @@ from ..errors import APIConnectionError, APITimeoutError, error_from_response
 
 @dataclass(frozen=True)
 class RetryPolicy:
+    """Retry counts, backoff, and retryable status codes for HTTP requests."""
+
     max_retries: int = 2
     backoff_base: float = 0.5
     backoff_max: float = 8.0
@@ -23,6 +25,8 @@ class RetryPolicy:
     )
 
     def delay(self, attempt: int, retry_after: float | None = None) -> float:
+        """Return the sleep before ``attempt``, honoring ``Retry-After``."""
+
         if retry_after is not None:
             return min(retry_after, self.backoff_max)
         delay = min(self.backoff_base * (2**attempt), self.backoff_max)
@@ -33,6 +37,8 @@ class RetryPolicy:
 
 @dataclass(frozen=True)
 class TransportConfig:
+    """Connection settings shared by the sync and async transports."""
+
     base_url: str
     api_key: str | None = None
     headers: Mapping[str, str] = field(default_factory=dict)
@@ -41,6 +47,8 @@ class TransportConfig:
     user_agent: str = f"brainstorm-llm/{__version__}"
 
     def build_headers(self, extra: Mapping[str, str] | None = None, *, stream: bool = False) -> dict[str, str]:
+        """Build request headers, including auth and the SSE accept header."""
+
         headers: dict[str, str] = {
             "Accept": "text/event-stream" if stream else "application/json",
             "User-Agent": self.user_agent,
@@ -53,10 +61,14 @@ class TransportConfig:
         return headers
 
     def url(self, path: str) -> str:
+        """Join the base URL and a path without duplicate slashes."""
+
         return f"{self.base_url.rstrip('/')}/{path.lstrip('/')}"
 
 
 class HttpTransport:
+    """Synchronous httpx transport with JSON encoding and retries."""
+
     def __init__(
         self,
         config: TransportConfig,
@@ -72,6 +84,8 @@ class HttpTransport:
 
     @property
     def client(self) -> httpx.Client:
+        """The underlying pooled ``httpx.Client``."""
+
         return self._client
 
     def request(
@@ -83,6 +97,8 @@ class HttpTransport:
         headers: Mapping[str, str] | None = None,
         stream: bool = False,
     ) -> httpx.Response:
+        """Send one request, retrying transient failures and raising normalized errors."""
+
         content = None
         request_headers = self.config.build_headers(headers, stream=stream)
         if json_body is not None:
@@ -128,6 +144,8 @@ class HttpTransport:
         raise last_error or APIConnectionError("Request failed after retries")
 
     def close(self) -> None:
+        """Close the underlying HTTP connection pool."""
+
         self._client.close()
 
     def __enter__(self) -> "HttpTransport":
@@ -138,6 +156,8 @@ class HttpTransport:
 
 
 class AsyncHttpTransport:
+    """Asynchronous httpx transport with JSON encoding and retries."""
+
     def __init__(
         self,
         config: TransportConfig,
@@ -153,6 +173,8 @@ class AsyncHttpTransport:
 
     @property
     def client(self) -> httpx.AsyncClient:
+        """The underlying pooled ``httpx.AsyncClient``."""
+
         return self._client
 
     async def request(
@@ -164,6 +186,8 @@ class AsyncHttpTransport:
         headers: Mapping[str, str] | None = None,
         stream: bool = False,
     ) -> httpx.Response:
+        """Send one request asynchronously with the same retry semantics as sync."""
+
         import asyncio
 
         content = None
@@ -211,6 +235,8 @@ class AsyncHttpTransport:
         raise last_error or APIConnectionError("Request failed after retries")
 
     async def aclose(self) -> None:
+        """Close the underlying async connection pool."""
+
         await self._client.aclose()
 
     async def __aenter__(self) -> "AsyncHttpTransport":

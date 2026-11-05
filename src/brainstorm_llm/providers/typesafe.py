@@ -10,12 +10,16 @@ from .systemone import SystemOneWireMixin
 
 
 class TypeSafeProvider(SystemOneWireMixin, BaseProvider):
+    """Direct TypeSafe System One API for decision models."""
+
     name = "typesafe"
     default_base_url = "https://api.typesafe.ai/v1"
     api_key_env = ("TYPESAFE_API_KEY",)
     requires_api_key = True
 
     def wire_for(self, model: str) -> str:
+        """TypeSafe only serves System One decision requests."""
+
         return "systemone"
 
     def _model_info_from_item(self, item: Mapping[str, Any]) -> ModelInfo:
@@ -30,19 +34,29 @@ class TypeSafeProvider(SystemOneWireMixin, BaseProvider):
         )
 
     def model_prices(self, pricing_type: PricingMode = "any") -> ModelPricing:
+        """TypeSafe does not publish machine-readable prices."""
+
         raise PricingUnavailableError(
             "TypeSafe does not publish machine-readable pricing; use the Command Code provider "
             "for Jev pricing or consult https://docs.typesafe.ai/."
         )
 
     def generate(self, params, **kwargs):
+        """Not supported; TypeSafe only serves System One decisions."""
+
         raise ConfigurationError("The TypeSafe provider only serves System One decision requests")
 
     async def agenerate(self, params, **kwargs):
+        """Not supported; TypeSafe only serves System One decisions."""
+
         raise ConfigurationError("The TypeSafe provider only serves System One decision requests")
 
     def stream(self, params, **kwargs):
+        """Not supported; System One decisions never stream."""
+
         raise ConfigurationError("System One decisions never stream")
 
     def astream(self, params, **kwargs):
+        """Not supported; System One decisions never stream."""
+
         raise ConfigurationError("System One decisions never stream")
