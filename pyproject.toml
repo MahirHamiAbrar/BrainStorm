@@ -8,9 +8,13 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "httpx>=0.28.1",
     "langchain>=1.4.9",
     "langgraph>=1.2.20",
     "loguru>=0.7.3",
+    "orjson>=3.13.0",
+    "pydantic>=2.14.0",
+    "selectolax>=1.0.0",
 ]
 
 [project.scripts]
@@ -19,6 +23,9 @@ brainstorm = "brainstorm:main"
 [build-system]
 requires = ["uv_build>=0.9.24,<0.10.0"]
 build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = ["brainstorm", "brainstorm_llm"]
 
 [tool.pyright]
 include = ["src"]
@@ -31,14 +38,21 @@ pythonVersion = "3.14"
 asyncio_mode = "auto"
 asyncio_default_test_loop_scope = "session"
 asyncio_default_fixture_loop_scope = "session"
-testpaths = ["*"]
-addopts = []
+testpaths = ["tests"]
+addopts = ["-q"]
+markers = [
+    "integration: tests that call live provider APIs (requires RUN_INTEGRATION=1 and API keys)",
+]
 
 [tool.taskipy.tasks]
 test = { cmd = "uv run -m pytest", help = "runs all unit tests" }
+test-integration = { cmd = "uv run -m pytest -m integration", help = "runs live provider tests" }
+prices = { cmd = "uv run python scripts/refresh_prices.py", help = "refreshes model price caches" }
 
 [dependency-groups]
 dev = [
     "pytest>=9.2.0",
+    "pytest-asyncio>=1.2.0",
+    "pyright>=1.1.400",
     "taskipy>=1.14.1",
 ]
