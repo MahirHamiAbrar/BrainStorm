@@ -1,10 +1,17 @@
 [project]
 name = "brainstorm"
 version = "0.1.0"
-description = "Add your description here"
+description = "An agent that helps you to learn anything on your computer."
 readme = "README.md"
-requires-python = ">=3.15"
-dependencies = []
+authors = [
+    { name = "MahirHamiAbrar" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "langchain>=1.4.9",
+    "langgraph>=1.2.20",
+    "loguru>=0.7.3",
+]
 
 [project.scripts]
 brainstorm = "brainstorm:main"
@@ -12,3 +19,26 @@ brainstorm = "brainstorm:main"
 [build-system]
 requires = ["uv_build>=0.9.24,<0.10.0"]
 build-backend = "uv_build"
+
+[tool.pyright]
+include = ["src"]
+venvPath = "."
+venv = ".venv"
+extraPaths = ["src"]
+pythonVersion = "3.14"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_test_loop_scope = "session"
+asyncio_default_fixture_loop_scope = "session"
+testpaths = ["*"]
+addopts = []
+
+[tool.taskipy.tasks]
+test = { cmd = "uv run -m pytest", help = "runs all unit tests" }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "taskipy>=1.14.1",
+]
