@@ -1,2 +1,2 @@
-def main() -> None:
-    print("Hello from brainstorm!")
+from dotenv import load_dotenv
+load_dotenv()
