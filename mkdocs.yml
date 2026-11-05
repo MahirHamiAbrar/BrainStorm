@@ -1,0 +1,69 @@
+site_name: BrainStorm LLM
+repo_url: https://github.com/MahirHamiAbrar/BrainStorm
+repo_name: MahirHamiAbrar/BrainStorm
+edit_uri: edit/main/src/brainstorm_llm/docs/
+
+docs_dir: src/brainstorm_llm/docs
+site_dir: site
+
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Providers: providers.md
+  - Messages: messages.md
+  - Streaming: streaming.md
+  - Tools: tools.md
+  - Usage and costs: usage-and-costs.md
+  - Models and pricing: models-and-pricing.md
+  - Errors and retries: errors-and-retries.md
+  - Wire contracts: wire-contracts.md
+  - Decisions: decisions.md
+  - LangChain: langchain.md
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.footer
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+validation:
+  links:
+    absolute_links: relative_to_docs
+    anchors: warn
+    unrecognized_links: warn

@@ -49,6 +49,8 @@ test = { cmd = "uv run -m pytest", help = "runs all unit tests" }
 test-integration = { cmd = "uv run -m pytest -m integration", help = "runs live provider tests" }
 prices = { cmd = "uv run python scripts/refresh_prices.py", help = "refreshes model price caches" }
 ui = { cmd = "uv run -m brainstorm_ui.app", help = "opens the ui window" }
+docs = { cmd = "uv run --with-requirements requirements-docs.txt mkdocs serve", help = "serves the docs locally" }
+docs-build = { cmd = "uv run --with-requirements requirements-docs.txt mkdocs build --strict", help = "builds the docs" }
 
 [dependency-groups]
 brainstorm-ui = [
